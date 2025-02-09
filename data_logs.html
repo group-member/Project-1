@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Logs - Garbage Monitoring System</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        h1 { color: green; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Garbage Monitoring System</h1>
+        <nav>
+            <ul>
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="data_logs.html">Data Logs</a></li>
+                <li><a href="live_stream.html">Live Streaming</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="data-logs">
+            <h2>Sorting Data Logs</h2>
+            <div class="report-header">
+                <p><strong>System:</strong> Garbage Monitoring System</p>
+                <p><strong>User:</strong> <span id="username">Admin</span></p>
+                <p><strong>Date:</strong> <span id="current-date"></span></p>
+            </div>
+            <div>
+                <label for="filter-date">Filter by Date:</label>
+                <input type="date" id="filter-date" />
+            </div>
+            <div class="table-container">
+                <table id="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Sorting Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="export-buttons">
+                <button id="download-csv">Download CSV</button>
+                <button id="download-pdf">Download PDF</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        // Function to format the date to match DD/MM/YYYY format
+        function formatDateToFilter(date) {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // Function to update the table, apply filters and sort data in descending order
+        function updateLogTable() {
+            let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
+            let filterDate = document.getElementById('filter-date').value;
+
+            // Convert filterDate to DD/MM/YYYY format for filtering
+            if (filterDate) {
+                const formattedFilterDate = formatDateToFilter(filterDate);
+                sortingLogs = sortingLogs.filter(log => {
+                    const logDate = log.timestamp.split(',')[0]; // Extracts only the date part (DD/MM/YYYY)
+                    return logDate === formattedFilterDate;
+                });
+            }
+
+            // Sort logs in descending order (latest first)
+            sortingLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            const logsTableBody = document.getElementById('logs-table').getElementsByTagName('tbody')[0];
+            logsTableBody.innerHTML = ''; // Clear previous rows
+
+            sortingLogs.forEach(log => {
+                let row = logsTableBody.insertRow();
+                let timestampCell = row.insertCell(0);
+                let statusCell = row.insertCell(1);
+                timestampCell.textContent = log.timestamp;
+                statusCell.textContent = log.status;
+            });
+        }
+
+        // Update the table when the page loads
+        window.onload = updateLogTable;
+
+        // Add event listener to filter when date changes
+        document.getElementById('filter-date').addEventListener('change', updateLogTable);
+
+        // Prompt for user name and role
+        function getUserInfo(callback) {
+            const userName = prompt("Please enter your name:");
+            const userRole = prompt("Please enter your role:");
+            callback(userName, userRole);
+        }
+
+        // Download CSV with filtered data
+        document.getElementById('download-csv').addEventListener('click', function () {
+            getUserInfo(function (userName, userRole) {
+                if (userName && userRole) {
+                    let filterDate = document.getElementById('filter-date').value;
+                    let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
+                    
+                    // Apply date filter if selected
+                    if (filterDate) {
+                        const formattedFilterDate = formatDateToFilter(filterDate);
+                        sortingLogs = sortingLogs.filter(log => {
+                            const logDate = log.timestamp.split(',')[0]; // Extracts only the date part (DD/MM/YYYY)
+                            return logDate === formattedFilterDate;
+                        });
+                    }
+
+                    // Sort logs in descending order (latest first)
+                    sortingLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    let csvData = [['System Name', 'Garbage Monitoring System'], ['User', userName], ['Role', userRole], ['Date', new Date().toLocaleDateString()]];
+                    csvData.push(['Timestamp', 'Sorting Status']);
+                    sortingLogs.forEach(log => {
+                        csvData.push([log.timestamp, log.status]);
+                    });
+
+                    let csv = Papa.unparse(csvData);
+                    let blob = new Blob([csv], { type: 'text/csv' });
+                    let url = URL.createObjectURL(blob);
+                    let a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'sorting_logs.csv';
+                    a.click();
+                } else {
+                    alert("Name and Role are required.");
+                }
+            });
+        });
+
+        // Download PDF with filtered data
+        document.getElementById('download-pdf').addEventListener('click', function () {
+            getUserInfo(function (userName, userRole) {
+                if (userName && userRole) {
+                    let filterDate = document.getElementById('filter-date').value;
+                    let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
+                    
+                    // Apply date filter if selected
+                    if (filterDate) {
+                        const formattedFilterDate = formatDateToFilter(filterDate);
+                        sortingLogs = sortingLogs.filter(log => {
+                            const logDate = log.timestamp.split(',')[0]; // Extracts only the date part (DD/MM/YYYY)
+                            return logDate === formattedFilterDate;
+                        });
+                    }
+
+                    // Sort logs in descending order (latest first)
+                    sortingLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('p', 'mm', 'a4');
+                    doc.setFontSize(18);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(0, 128, 0);
+                    doc.text('Garbage Monitoring System', 70, 15);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(0, 0, 0);
+                    doc.text('User: ' + userName, 20, 25);
+                    doc.text('Role: ' + userRole, 20, 35);
+                    doc.text('Date: ' + new Date().toLocaleDateString(), 20, 45);
+                    doc.text('---------------------------------------------', 20, 50);
+
+                    let y = 60;
+                    doc.setFontSize(14);
+                    doc.text('Sorting Logs Report', 80, y);
+                    y += 10;
+
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Timestamp', 20, y);
+                    doc.text('Sorting Status', 120, y);
+                    y += 8;
+
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    sortingLogs.forEach((log, i) => {
+                        doc.text(log.timestamp, 20, y + i * 7);
+                        doc.text(log.status, 120, y + i * 7);
+                    });
+
+                    doc.text('---------------------------------------------', 20, y + sortingLogs.length * 7 + 15);
+                    doc.text('Approval & Verification', 80, y + sortingLogs.length * 7 + 25);
+                    doc.text('Verified By: ___________________', 20, y + sortingLogs.length * 7 + 35);
+                    doc.text('Signature: ___________________', 20, y + sortingLogs.length * 7 + 45);
+                    doc.text('Official Stamp: _______________', 20, y + sortingLogs.length * 7 + 55);
+                    doc.save('sorting_logs.pdf');
+                } else {
+                    alert("Name and Role are required.");
+                }
+            });
+        });
+    </script>
+     <footer>
+        <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>
+    </footer>
+</body>
+</html>

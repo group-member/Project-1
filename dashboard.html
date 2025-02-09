@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garbage Monitoring System - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Garbage Monitoring System</h1>
+        <nav>
+            <ul>
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="data_logs.html">Data Logs</a></li>
+                <li><a href="live_stream.html">Live Streaming</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="dashboard">
+            <h2>Dashboard Overview</h2>
+            <div class="dashboard-container">
+                <!-- Recent Alerts -->
+                <div class="dashboard-card" id="recent-alerts">
+                    <h3>Recent Alerts</h3>
+                    <div id="alerts-list">No alerts yet</div>
+                </div>
+
+                <!-- System Insights -->
+                <div class="dashboard-card" id="system-insights">
+                    <h3>System Insights</h3>
+                    <p><strong>Sorting Status:</strong> <span id="sorting-status">Not Detected</span></p>
+                    <p><strong>Last Sorting Activity:</strong> <span id="last-activity">None</span></p>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="dashboard-card" id="navigation">
+                    <h3>Quick Navigation</h3>
+                    <button onclick="window.location.href='live_stream.html'">Go to Live Streaming</button>
+                    <button onclick="window.location.href='data_logs.html'">Go to Data Logs</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Function to update the dashboard with the latest sorting log
+        function updateDashboard() {
+            let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
+
+            // Get the last 5 logs
+            let recentLogs = sortingLogs.slice(-5).reverse();
+
+            let alertsList = document.getElementById('alerts-list');
+            let sortingStatus = document.getElementById('sorting-status');
+            let lastActivity = document.getElementById('last-activity');
+
+            if (recentLogs.length > 0) {
+                alertsList.innerHTML = recentLogs.map(log => `<p>${log.timestamp} - ${log.status}</p>`).join('');
+                sortingStatus.textContent = recentLogs[0].status; // Latest status
+                lastActivity.textContent = recentLogs[0].timestamp; // Timestamp of latest alert
+            } else {
+                alertsList.textContent = "No sorting logs available.";
+                sortingStatus.textContent = "Not Detected";
+                lastActivity.textContent = "None";
+            }
+        }
+
+        window.onload = updateDashboard;
+        setInterval(updateDashboard, 5000);
+    </script>
+     <footer>
+        <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>
+    </footer>
+</body>
+</html>
