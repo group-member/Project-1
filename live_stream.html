@@ -33,12 +33,13 @@
             <button id="stop-camera" disabled>Stop Camera</button>
             
             <div id="sorting-status">Status: <span id="status-text">Loading model...</span></div>
+            <div id="predictions-display"></div> <!-- Added to display predictions -->
 
             <div id="alerts">
                <!-- Visual Alert Section -->
                 <section id="alert-section">
                     <h3>Sorting Alerts</h3>
-                    <div id="visual-alert" class="hidden">⚠ Incorrect Sorting Detected!</div>
+                    <div id="visual-alert" class="hidden" aria-live="assertive">⚠ Incorrect Sorting Detected!</div>
                 </section>
                 <audio id="audio-alert" src="alert.mp3"></audio>
             </div>
@@ -63,47 +64,67 @@
         let audioAlert = document.getElementById("audio-alert");
         let startButton = document.getElementById("start-camera");
         let stopButton = document.getElementById("stop-camera");
+        let predictionsDisplay = document.getElementById("predictions-display");
         let stream = null;
         let model;
 
         // Load TensorFlow.js Model
         async function loadModel() {
-            console.log("Loading TensorFlow model..."); // Debugging
+            console.log("Loading TensorFlow model...");
             statusText.innerText = "Loading TensorFlow model...";
             try {
                 model = await mobilenet.load();  // Load MobileNet model
-                console.log("TensorFlow.js model loaded!"); // Debugging
+                console.log("TensorFlow.js model loaded!");
                 statusText.innerText = "Model Loaded. Ready!";
             } catch (error) {
-                console.error("Error loading model:", error); // Debugging
+                console.error("Error loading model:", error);
                 statusText.innerText = "Failed to load model.";
             }
         }
 
-        // Check if detected object belongs to correct waste categories
+        // Check if the detected object is valid garbage
         function checkSorting(predictions) {
-            console.log("Checking predictions:", predictions); // Debugging
-            const validMaterials = ["plastic", "paper", "metal"];
-            let isValid = predictions.some(prediction => 
-                validMaterials.some(material => prediction.className.toLowerCase().includes(material))
-            );
-            console.log("Is valid sorting?", isValid); // Debugging
+            const validMaterials = {
+                plastic: ["plastic", "bottle", "container"],
+                paper: ["paper", "cardboard"],
+                metal: ["metal", "can", "aluminum"],
+                glass: ["glass", "bottle"],
+                textiles: ["textile", "fabric", "cloth"],
+                rubber: ["rubber", "tire"]
+            };
+
+            let isValid = predictions.some(prediction => {
+                let className = prediction.className.toLowerCase();
+                return Object.values(validMaterials).some(materials => 
+                    materials.some(material => className.includes(material))
+                );
+            });
+
             return isValid;
+        }
+
+        // Display predictions on the screen
+        function displayPredictions(predictions) {
+            predictionsDisplay.innerHTML = predictions
+                .map(prediction => `
+                    <div>
+                        <strong>${prediction.className}</strong>: ${(prediction.probability * 100).toFixed(2)}%
+                    </div>
+                `)
+                .join("");
         }
 
         // Store sorting logs in localStorage
         function storeSortingLog(timestamp, status) {
-            console.log("Storing log:", { timestamp, status }); // Debugging
             let logs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
             logs.push({ timestamp, status });
             localStorage.setItem('sortingLogs', JSON.stringify(logs));
-            console.log("Current logs in localStorage:", JSON.parse(localStorage.getItem('sortingLogs'))); // Debugging
         }
 
         // Process camera feed for detection
         async function processVideo() {
             if (!video.videoWidth || !model) {
-                console.log("Video or model not ready. Skipping frame."); // Debugging
+                console.log("Video or model not ready. Skipping frame.");
                 return;
             }
 
@@ -113,42 +134,42 @@
 
             // Get predictions
             const predictions = await model.classify(canvas);
-            console.log("Predictions:", predictions); // Debugging
+            console.log("Predictions:", predictions);
 
             let sortingStatus = checkSorting(predictions);
             let currentTime = new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' });
-            console.log("Sorting Status:", sortingStatus); // Debugging
 
-            // Update UI based on sorting status
+            // Update UI
             statusText.innerText = sortingStatus ? "Correct Sorting" : "Incorrect Sorting";
+            displayPredictions(predictions);
 
             // Store log in localStorage
             storeSortingLog(currentTime, sortingStatus ? "Correct Sorting" : "Incorrect Sorting");
 
             // Trigger alert if sorting is incorrect
             if (!sortingStatus) {
-    console.log("Incorrect sorting detected! Showing visual alert...");
-    visualAlert.classList.remove("hidden");
-    visualAlert.classList.add("flash-alert");
-    console.log("Visual alert classes:", visualAlert.classList); // Debugging
-    audioAlert.play();
-} else {
-    console.log("Correct sorting detected! Hiding visual alert...");
-    visualAlert.classList.remove("flash-alert");
-    visualAlert.classList.add("hidden");
-    console.log("Visual alert classes:", visualAlert.classList); // Debugging
-}
+                visualAlert.classList.remove("hidden");
+                visualAlert.classList.add("flash-alert");
+                audioAlert.play();
+
+                // Hide the visual alert after 15 seconds
+                setTimeout(() => {
+                    visualAlert.classList.remove("flash-alert");
+                    visualAlert.classList.add("hidden");
+                }, 15000);
+            } else {
+                visualAlert.classList.remove("flash-alert");
+                visualAlert.classList.add("hidden");
+            }
 
             // Reduce frame rate for efficiency
-            setTimeout(() => requestAnimationFrame(processVideo), 200);
+            setTimeout(() => requestAnimationFrame(processVideo), 500);
         }
 
         // Start the camera feed
         startButton.addEventListener("click", () => {
-            console.log("Attempting to access camera..."); // Debugging
             navigator.mediaDevices.getUserMedia({ video: true })
                 .then(mediaStream => {
-                    console.log("Camera access granted!"); // Debugging
                     stream = mediaStream;
                     video.srcObject = stream;
                     startButton.disabled = true;
@@ -156,14 +177,14 @@
                     processVideo();
                 })
                 .catch(error => {
-                    console.error("Camera access error:", error); // Debugging
+                    console.error("Camera access error:", error);
                     document.getElementById("camera-error").classList.remove("hidden");
+                    statusText.innerText = "Camera access denied or unavailable.";
                 });
         });
 
         // Stop the camera feed
         stopButton.addEventListener("click", () => {
-            console.log("Stopping camera..."); // Debugging
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
@@ -178,42 +199,42 @@
         // Image upload handler
         document.getElementById('image-upload').addEventListener('change', async (event) => {
             let file = event.target.files[0];
-            if (file) {
-                let img = new Image();
-                img.onload = async () => {
-                    // Set canvas size to the image's size
-                    let uploadedCanvas = document.getElementById('uploaded-canvas');
-                    let uploadedCtx = uploadedCanvas.getContext('2d');
-                    uploadedCanvas.width = img.width;
-                    uploadedCanvas.height = img.height;
-
-                    // Draw the image to the canvas
-                    uploadedCtx.drawImage(img, 0, 0);
-
-                    // Get predictions for the uploaded image
-                    const predictions = await model.classify(uploadedCanvas);
-                    console.log("Uploaded image predictions:", predictions); // Debugging
-
-                    // Update status text
-                    let sortingStatus = checkSorting(predictions);
-                    let currentTime = new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' });
-                    statusText.innerText = sortingStatus ? "Correct Sorting" : "Incorrect Sorting";
-
-                    // Store log in localStorage
-                    storeSortingLog(currentTime, sortingStatus ? "Correct Sorting" : "Incorrect Sorting");
-
-                    // Trigger alert if sorting is incorrect
-                    if (!sortingStatus) {
-                        console.log("Incorrect sorting detected in uploaded image!"); // Debugging
-                        visualAlert.classList.add("flash-alert");
-                        audioAlert.play();
-                    } else {
-                        console.log("Correct sorting detected in uploaded image!"); // Debugging
-                        visualAlert.classList.remove("flash-alert");
-                    }
-                };
-                img.src = URL.createObjectURL(file);
+            if (!file.type.startsWith('image/')) {
+                alert("Please upload a valid image file.");
+                return;
             }
+
+            let img = new Image();
+            img.onload = async () => {
+                let uploadedCanvas = document.getElementById('uploaded-canvas');
+                let uploadedCtx = uploadedCanvas.getContext('2d');
+                uploadedCanvas.width = img.width;
+                uploadedCanvas.height = img.height;
+                uploadedCtx.drawImage(img, 0, 0);
+
+                const predictions = await model.classify(uploadedCanvas);
+                console.log("Uploaded image predictions:", predictions);
+
+                let sortingStatus = checkSorting(predictions);
+                let currentTime = new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' });
+                statusText.innerText = sortingStatus ? "Correct Sorting" : "Incorrect Sorting";
+                displayPredictions(predictions);
+
+                storeSortingLog(currentTime, sortingStatus ? "Correct Sorting" : "Incorrect Sorting");
+
+                if (!sortingStatus) {
+                    visualAlert.classList.add("flash-alert");
+                    audioAlert.play();
+
+                    setTimeout(() => {
+                        visualAlert.classList.remove("flash-alert");
+                        visualAlert.classList.add("hidden");
+                    }, 15000);
+                } else {
+                    visualAlert.classList.remove("flash-alert");
+                }
+            };
+            img.src = URL.createObjectURL(file);
         });
     </script>
     <footer>
