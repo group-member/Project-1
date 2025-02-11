@@ -146,66 +146,89 @@
 
         // Download PDF with filtered data
         document.getElementById('download-pdf').addEventListener('click', function () {
-            getUserInfo(function (userName, userRole) {
-                if (userName && userRole) {
-                    let filterDate = document.getElementById('filter-date').value;
-                    let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
-                    
-                    // Apply date filter if selected
-                    if (filterDate) {
-                        const formattedFilterDate = formatDateToFilter(filterDate);
-                        sortingLogs = sortingLogs.filter(log => {
-                            const logDate = log.timestamp.split(',')[0]; // Extracts only the date part (DD/MM/YYYY)
-                            return logDate === formattedFilterDate;
-                        });
-                    }
+    getUserInfo(function (userName, userRole) {
+        if (userName && userRole) {
+            let filterDate = document.getElementById('filter-date').value;
+            let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
+            
+            // Apply date filter if selected
+            if (filterDate) {
+                const formattedFilterDate = formatDateToFilter(filterDate);
+                sortingLogs = sortingLogs.filter(log => {
+                    const logDate = log.timestamp.split(',')[0]; // Extracts only the date part (DD/MM/YYYY)
+                    return logDate === formattedFilterDate;
+                });
+            }
 
-                    // Sort logs in descending order (latest first)
-                    sortingLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            // Sort logs in descending order (latest first)
+            sortingLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF('p', 'mm', 'a4');
-                    doc.setFontSize(18);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(0, 128, 0);
-                    doc.text('Garbage Monitoring System', 70, 15);
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(0, 0, 0);
-                    doc.text('User: ' + userName, 20, 25);
-                    doc.text('Role: ' + userRole, 20, 35);
-                    doc.text('Date: ' + new Date().toLocaleDateString(), 20, 45);
-                    doc.text('---------------------------------------------', 20, 50);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 128, 0);
+            doc.text('Garbage Monitoring System', 70, 15);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(0, 0, 0);
+            doc.text('User: ' + userName, 20, 25);
+            doc.text('Role: ' + userRole, 20, 35);
+            doc.text('Date: ' + new Date().toLocaleDateString(), 20, 45);
+            doc.text('---------------------------------------------', 20, 50);
 
-                    let y = 60;
+            let y = 60;
+            doc.setFontSize(14);
+            doc.text('Sorting Logs Report', 80, y);
+            y += 10;
+
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Timestamp', 20, y);
+            doc.text('Sorting Status', 120, y);
+            y += 8;
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            
+            const lineHeight = 7;  // Adjust line height based on font size
+            const maxLinesPerPage = 25;  // Max lines per page
+            let lineCount = 0;
+
+            sortingLogs.forEach((log, i) => {
+                if (lineCount >= maxLinesPerPage) {
+                    doc.addPage();  // Start a new page
+                    lineCount = 0;
+                    y = 20; // Reset the y position
                     doc.setFontSize(14);
                     doc.text('Sorting Logs Report', 80, y);
                     y += 10;
-
                     doc.setFontSize(12);
                     doc.setFont('helvetica', 'bold');
                     doc.text('Timestamp', 20, y);
                     doc.text('Sorting Status', 120, y);
                     y += 8;
-
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'normal');
-                    sortingLogs.forEach((log, i) => {
-                        doc.text(log.timestamp, 20, y + i * 7);
-                        doc.text(log.status, 120, y + i * 7);
-                    });
-
-                    doc.text('---------------------------------------------', 20, y + sortingLogs.length * 7 + 15);
-                    doc.text('Approval & Verification', 80, y + sortingLogs.length * 7 + 25);
-                    doc.text('Verified By: ___________________', 20, y + sortingLogs.length * 7 + 35);
-                    doc.text('Signature: ___________________', 20, y + sortingLogs.length * 7 + 45);
-                    doc.text('Official Stamp: _______________', 20, y + sortingLogs.length * 7 + 55);
-                    doc.save('sorting_logs.pdf');
-                } else {
-                    alert("Name and Role are required.");
                 }
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(log.timestamp, 20, y + lineCount * lineHeight);
+                doc.text(log.status, 120, y + lineCount * lineHeight);
+                lineCount++;
             });
-        });
+
+            doc.text('---------------------------------------------', 20, y + lineCount * lineHeight + 15);
+            doc.text('Approval & Verification', 80, y + lineCount * lineHeight + 25);
+            doc.text('Verified By: ___________________', 20, y + lineCount * lineHeight + 35);
+            doc.text('Signature: ___________________', 20, y + lineCount * lineHeight + 45);
+            doc.text('Official Stamp: _______________', 20, y + lineCount * lineHeight + 55);
+            doc.save('sorting_logs.pdf');
+        } else {
+            alert("Name and Role are required.");
+        }
+    });
+});
+
     </script>
      <footer>
         <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>
