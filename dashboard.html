@@ -35,11 +35,13 @@
                     <p><strong>Last Sorting Activity:</strong> <span id="last-activity">None</span></p>
                 </div>
 
-                <!-- Navigation Buttons -->
+                <!-- Quick Navigation -->
                 <div class="dashboard-card" id="navigation">
                     <h3>Quick Navigation</h3>
                     <button onclick="window.location.href='live_stream.html'">Go to Live Streaming</button>
                     <button onclick="window.location.href='data_logs.html'">Go to Data Logs</button>
+                    <!-- New Button to link to Feedback page -->
+                    <button onclick="window.location.href='feedback_merged.php'">Give your Feedback about the System</button>
                 </div>
             </div>
         </section>
@@ -71,7 +73,8 @@
         window.onload = updateDashboard;
         setInterval(updateDashboard, 5000);
     </script>
-     <footer>
+    
+    <footer>
         <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>
     </footer>
 </body>
