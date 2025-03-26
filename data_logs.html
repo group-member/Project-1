@@ -17,6 +17,10 @@
                 <li><a href="dashboard.html">Dashboard</a></li>
                 <li><a href="data_logs.html">Data Logs</a></li>
                 <li><a href="live_stream.html">Live Streaming</a></li>
+                <!-- Logout Button -->
+                <div class="logout-container">
+                    <button onclick="logout()">Logout</button>
+                </div>
             </ul>
         </nav>
     </header>
@@ -201,6 +205,10 @@
             doc.text('Official Stamp: _______________', 20, doc.lastAutoTable.finalY + 55);
             doc.save('sorting_logs.pdf');
         });
+                // Logout function
+                function logout() {
+            window.location.href = "logout.php"; // Redirect to logout PHP script
+        }
     </script>
 
     <footer>

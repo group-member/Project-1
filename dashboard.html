@@ -14,6 +14,10 @@
                 <li><a href="dashboard.html">Dashboard</a></li>
                 <li><a href="data_logs.html">Data Logs</a></li>
                 <li><a href="live_stream.html">Live Streaming</a></li>
+                <!-- Logout Button -->
+                <div class="logout-container">
+                    <button onclick="logout()">Logout</button>
+                </div>
             </ul>
         </nav>
     </header>
@@ -80,11 +84,15 @@
                     lastActivity.textContent = "N/A";
                 });
         }
+
+        // Logout function
+        function logout() {
+            window.location.href = "logout.php"; // Redirect to logout PHP script
+        }
     
         window.onload = updateDashboard;
         setInterval(updateDashboard, 5000); // Refresh every 5 seconds
     </script>
-    
 
     <footer>
         <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>

@@ -20,6 +20,10 @@
                 <li><a href="dashboard.html">Dashboard</a></li>
                 <li><a href="data_logs.html">Data Logs</a></li>
                 <li><a href="live_stream.html">Live Streaming</a></li>
+                <!-- Logout Button -->
+                <div class="logout-container">
+                    <button onclick="logout()">Logout</button>
+                </div>
             </ul>
         </nav>
     </header>
@@ -40,30 +44,34 @@
             <div id="sorting-status">Status: <span id="status-text">Loading model...</span></div>
             <div id="predictions-display"></div>
         </section>
-
-    <div id="alerts">
-        <!-- Visual Alert Section -->
-        <section id="alert-section">
-            <h3>Sorting Alerts</h3>
-            <div id="visual-alert" class="hidden" aria-live="assertive">⚠ Incorrect Sorting Detected!</div>
-        </section>
-        <audio id="audio-alert" src="alert.mp3"></audio>
-    </div>
-
-    <div id="camera-error" class="hidden">⚠ Camera access denied or unavailable.</div>
-        <!-- Image Upload Section -->
-        <section id="image-upload-section">
-            <h3>Upload Image for Detection</h3>
-            <input type="file" id="image-upload" accept="image/*">
-            <canvas id="uploaded-canvas"></canvas>
-        </section>
-
-        <!-- Live Stream from Phone Section -->
-        <section id="phone-stream">
-            <h2>Live Camera Feed from Phone</h2>
-            <img src="http://172.16.226.63:8080/video" alt="Live Camera Feed" id="phone-camera-feed">
-        </section>
-    </main>
+    
+        <div id="alerts">
+            <!-- Visual Alert Section -->
+            <section id="alert-section">
+                <h3>Sorting Alerts</h3>
+                <div id="visual-alert" class="hidden" aria-live="assertive">⚠ Incorrect Sorting Detected!</div>
+            </section>
+            <audio id="audio-alert" src="alert.mp3"></audio>
+        </div>
+    
+        <div id="camera-error" class="hidden">⚠ Camera access denied or unavailable.</div>
+    
+        <!-- Image Upload and Live Stream Section -->
+        <div id="upload-live-feed-container">
+            <!-- Image Upload Section -->
+            <section id="image-upload-section">
+                <h3>Upload Image for Detection</h3>
+                <input type="file" id="image-upload" accept="image/*">
+                <canvas id="uploaded-canvas"></canvas>
+            </section>
+    
+            <!-- Live Stream from Phone Section -->
+            <section id="phone-stream">
+                <h2>Live Camera Feed from Phone</h2>
+                <img src="http://172.16.226.63:8080/video" alt="Live Camera Feed" id="phone-camera-feed">
+            </section>
+        </div>
+    </main>    
 
 
     <footer>
@@ -284,6 +292,10 @@
             };
             img.src = URL.createObjectURL(file);
         });
+                // Logout function
+                function logout() {
+            window.location.href = "logout.php"; // Redirect to logout PHP script
+        }
     </script>
 </body>
 

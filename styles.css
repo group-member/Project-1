@@ -236,32 +236,6 @@ th {
     margin-top: 20px;
 }
 
-/* Flex container to align image upload and phone stream side by side */
-#upload-live-feed-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 20px; /* Adds space between the sections */
-    margin-top: 20px;
-}
-
-#image-upload-section,
-#phone-stream {
-    flex: 1; /* Both sections take up equal space */
-    max-width: 48%; /* Prevent them from stretching too wide */
-}
-
-#phone-camera-feed {
-    width: 100%;
-    height: auto;
-    border: 1px solid #ccc;
-}
-
-#uploaded-canvas {
-    width: 100%;
-    height: auto;
-    border: 1px solid #ccc;
-}
-
 
 .hidden {
     visibility: hidden; /* Instead of display: none; */
