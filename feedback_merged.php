@@ -64,7 +64,6 @@ if ($result->num_rows > 0) {
     <title>Website Feedback</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
-        
         /* General Page Styles */
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; line-height: 1.6; }
         .container { max-width: 700px; margin: auto; padding: 20px; }
@@ -99,6 +98,13 @@ if ($result->num_rows > 0) {
         /* Thank You Message */
         #thank-you-message { text-align: center; font-size: 1.5rem; color: #4CAF50; font-weight: bold; }
         
+        /* Error Message */
+        .error-message {
+            color: red;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
         /* Responsive */
         @media (max-width: 600px) { form { width: 90%; padding: 18px; } button { font-size: 0.9rem; padding: 12px; } }
     </style>
@@ -110,12 +116,14 @@ if ($result->num_rows > 0) {
     <h2>Submit Your Feedback</h2>
 
     <!-- Feedback Form -->
-    <form action="" method="POST" enctype="multipart/form-data">
+    <form id="feedbackForm" action="" method="POST" enctype="multipart/form-data">
         <label for="name">Name:</label>
         <input type="text" id="name" name="name" required>
-        
+        <div class="error-message" id="name-error"></div>
+
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" required>
+        <div class="error-message" id="email-error"></div>
 
         <label>Rating:</label>
         <div class="star-rating" id="rating-stars">
@@ -127,6 +135,7 @@ if ($result->num_rows > 0) {
         </div>
         <p class="rating-description" id="rating-description">Hover over stars to see rating meaning</p>
         <input type="hidden" name="rating" id="rating-value" required>
+        <div class="error-message" id="rating-error"></div>
 
         <label for="comments">Comments (optional):</label>
         <textarea id="comments" name="comments"></textarea>
@@ -165,6 +174,40 @@ if ($result->num_rows > 0) {
 </div>
 
 <script>
+// Client-Side Validation
+document.getElementById("feedbackForm").addEventListener("submit", function(event) {
+    let isValid = true;
+
+    // Clear previous error messages
+    document.getElementById("name-error").textContent = '';
+    document.getElementById("email-error").textContent = '';
+    document.getElementById("rating-error").textContent = '';
+
+    // Check if required fields are filled
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const rating = document.getElementById("rating-value").value;
+
+    if (!name) {
+        document.getElementById("name-error").textContent = "Name is required.";
+        isValid = false;
+    }
+
+    if (!email) {
+        document.getElementById("email-error").textContent = "Email is required.";
+        isValid = false;
+    }
+
+    if (!rating) {
+        document.getElementById("rating-error").textContent = "Rating is required.";
+        isValid = false;
+    }
+
+    if (!isValid) {
+        event.preventDefault(); // Prevent form submission if validation fails
+    }
+});
+
 // Load more feedback via AJAX
 let feedbackOffset = <?php echo $feedbackOffset; ?>;
 function loadMoreFeedback() {
@@ -173,9 +216,10 @@ function loadMoreFeedback() {
 }
 
 // Star rating logic
+// Star rating logic
 const stars = document.querySelectorAll('#rating-stars i');
 const ratingValue = document.getElementById('rating-value');
-const ratingDescription = document.getElementById('rating-description');
+const ratingDescription = document.getElementById('rating-description'); // This line was missing
 let currentRating = 0;
 
 stars.forEach(star => {
@@ -198,6 +242,7 @@ function setStarRating(value) {
         }
     });
 
+    // Display the appropriate message based on the rating
     switch (value) {
         case 1:
             ratingDescription.textContent = 'Poor: Needs a lot of improvement';
@@ -209,15 +254,18 @@ function setStarRating(value) {
             ratingDescription.textContent = 'Average: Works fine but could be better';
             break;
         case 4:
-            ratingDescription.textContent = 'Very Good: Almost perfect"';
+            ratingDescription.textContent = 'Very Good: Almost perfect';
             break;
         case 5:
             ratingDescription.textContent = 'Excellent: Absolutely amazing!';
             break;
+        default:
+            ratingDescription.textContent = '';
+            break;
     }
 }
+
 </script>
 
 </body>
 </html>
-

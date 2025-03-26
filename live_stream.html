@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
 </head>
+
 <body>
     <header>
         <h1>Garbage Monitoring System</h1>
@@ -23,37 +25,50 @@
     </header>
 
     <main>
+        <!-- Live Streaming Section -->
         <section id="live-stream">
             <h2>Live Streaming</h2>
             <div id="video-container">
+                <!-- Existing camera feed -->
                 <video id="camera-feed" autoplay playsinline></video>
                 <canvas id="processed-canvas"></canvas>
             </div>
-            <button id="start-camera">Start Camera</button>
-            <button id="stop-camera" disabled>Stop Camera</button>
-            
-            <div id="sorting-status">Status: <span id="status-text">Loading model...</span></div>
-            <div id="predictions-display"></div> <!-- Added to display predictions -->
-
-            <div id="alerts">
-               <!-- Visual Alert Section -->
-                <section id="alert-section">
-                    <h3>Sorting Alerts</h3>
-                    <div id="visual-alert" class="hidden" aria-live="assertive">⚠ Incorrect Sorting Detected!</div>
-                </section>
-                <audio id="audio-alert" src="alert.mp3"></audio>
+            <div id="controls">
+                <button id="start-camera">Start Camera</button>
+                <button id="stop-camera" disabled>Stop Camera</button>
             </div>
-
-            <div id="camera-error" class="hidden">⚠ Camera access denied or unavailable.</div>
+            <div id="sorting-status">Status: <span id="status-text">Loading model...</span></div>
+            <div id="predictions-display"></div>
         </section>
 
+    <div id="alerts">
+        <!-- Visual Alert Section -->
+        <section id="alert-section">
+            <h3>Sorting Alerts</h3>
+            <div id="visual-alert" class="hidden" aria-live="assertive">⚠ Incorrect Sorting Detected!</div>
+        </section>
+        <audio id="audio-alert" src="alert.mp3"></audio>
+    </div>
+
+    <div id="camera-error" class="hidden">⚠ Camera access denied or unavailable.</div>
         <!-- Image Upload Section -->
         <section id="image-upload-section">
             <h3>Upload Image for Detection</h3>
             <input type="file" id="image-upload" accept="image/*">
             <canvas id="uploaded-canvas"></canvas>
         </section>
+
+        <!-- Live Stream from Phone Section -->
+        <section id="phone-stream">
+            <h2>Live Camera Feed from Phone</h2>
+            <img src="http://172.16.226.63:8080/video" alt="Live Camera Feed" id="phone-camera-feed">
+        </section>
     </main>
+
+
+    <footer>
+        <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>
+    </footer>
 
     <script>
         let video = document.getElementById("camera-feed");
@@ -67,6 +82,9 @@
         let predictionsDisplay = document.getElementById("predictions-display");
         let stream = null;
         let model;
+
+        // Assuming the user_id is already available (e.g., from session or global JS variable)
+        const userId = 1; // Replace with actual user ID dynamically if needed
 
         // Load TensorFlow.js Model
         async function loadModel() {
@@ -95,7 +113,7 @@
 
             let isValid = predictions.some(prediction => {
                 let className = prediction.className.toLowerCase();
-                return Object.values(validMaterials).some(materials => 
+                return Object.values(validMaterials).some(materials =>
                     materials.some(material => className.includes(material))
                 );
             });
@@ -114,12 +132,35 @@
                 .join("");
         }
 
-        // Store sorting logs in localStorage
-        function storeSortingLog(timestamp, status) {
-            let logs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
-            logs.push({ timestamp, status });
-            localStorage.setItem('sortingLogs', JSON.stringify(logs));
+        // Store sorting log in the database via PHP
+        async function storeSortingLog(timestamp, status, prediction) {
+    try {
+        const response = await fetch('store_log.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                'user_id': userId, 
+                'timestamp': timestamp,
+                'status': status,
+                'prediction': prediction
+            })
+        });
+
+        console.log("Data sent:", {user_id: userId, timestamp, status, prediction}); // Log the sent data
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const result = await response.text();
+        console.log("Response from PHP:", result);
+    } catch (error) {
+        console.error("Error storing log:", error);
+    }
+}
+
 
         // Process camera feed for detection
         async function processVideo() {
@@ -137,14 +178,17 @@
             console.log("Predictions:", predictions);
 
             let sortingStatus = checkSorting(predictions);
-            let currentTime = new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' });
+
+            // Get the current time in a MySQL-compatible format (YYYY-MM-DD HH:MM:SS)
+            let currentTime = new Date().toISOString().slice(0, 19).replace("T", " ");
 
             // Update UI
             statusText.innerText = sortingStatus ? "Correct Sorting" : "Incorrect Sorting";
             displayPredictions(predictions);
 
-            // Store log in localStorage
-            storeSortingLog(currentTime, sortingStatus ? "Correct Sorting" : "Incorrect Sorting");
+            // Send log data to server (store in database)
+            let predictionText = predictions.map(pred => `${pred.className}: ${(pred.probability * 100).toFixed(2)}%`).join(", ");
+            storeSortingLog(currentTime, sortingStatus ? "Correct Sorting" : "Incorrect Sorting", predictionText);
 
             // Trigger alert if sorting is incorrect
             if (!sortingStatus) {
@@ -216,11 +260,15 @@
                 console.log("Uploaded image predictions:", predictions);
 
                 let sortingStatus = checkSorting(predictions);
-                let currentTime = new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' });
+
+                // Get the current time in a MySQL-compatible format (YYYY-MM-DD HH:MM:SS)
+                let currentTime = new Date().toISOString().slice(0, 19).replace("T", " ");
                 statusText.innerText = sortingStatus ? "Correct Sorting" : "Incorrect Sorting";
                 displayPredictions(predictions);
 
-                storeSortingLog(currentTime, sortingStatus ? "Correct Sorting" : "Incorrect Sorting");
+                // Send log data to server (store in database)
+                let predictionText = predictions.map(pred => `${pred.className}: ${(pred.probability * 100).toFixed(2)}%`).join(", ");
+                storeSortingLog(currentTime, sortingStatus ? "Correct Sorting" : "Incorrect Sorting", predictionText);
 
                 if (!sortingStatus) {
                     visualAlert.classList.add("flash-alert");
@@ -237,8 +285,6 @@
             img.src = URL.createObjectURL(file);
         });
     </script>
-    <footer>
-        <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>
-    </footer>
 </body>
+
 </html>

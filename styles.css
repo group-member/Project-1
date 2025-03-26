@@ -9,9 +9,8 @@ body {
 }
 
 /* Header Styling */
-/* Header Styling */
 header {
-    background-color: gray;
+    background-color: #2E8B57;
     color: white;
     padding: 20px 30px;
     display: flex;
@@ -96,7 +95,6 @@ nav ul li a:hover {
     }
 }
 
-
 /* Main Layout */
 main {
     padding: 20px;
@@ -115,7 +113,7 @@ main {
 /* Dashboard Cards */
 .dashboard-container {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
     padding: 20px;
 }
@@ -238,6 +236,33 @@ th {
     margin-top: 20px;
 }
 
+/* Flex container to align image upload and phone stream side by side */
+#upload-live-feed-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px; /* Adds space between the sections */
+    margin-top: 20px;
+}
+
+#image-upload-section,
+#phone-stream {
+    flex: 1; /* Both sections take up equal space */
+    max-width: 48%; /* Prevent them from stretching too wide */
+}
+
+#phone-camera-feed {
+    width: 100%;
+    height: auto;
+    border: 1px solid #ccc;
+}
+
+#uploaded-canvas {
+    width: 100%;
+    height: auto;
+    border: 1px solid #ccc;
+}
+
+
 .hidden {
     visibility: hidden; /* Instead of display: none; */
     opacity: 0;
@@ -274,6 +299,7 @@ th {
     max-width: 600px;
     border: 1px solid #ddd;
     border-radius: 8px;
+    height: auto;
 }
 
 /* Camera Error */
@@ -286,7 +312,7 @@ th {
 
 /* Footer Section */
 footer {
-    background-color: #333;
+    background-color: #2E8B57;
     color: white;
     text-align: center;
     padding: 20px;
@@ -319,6 +345,10 @@ footer p {
 
     #video-container {
         width: 100%;
+    }
+
+    #live-stream, #image-upload-section, #phone-stream {
+        width: 100%; /* Full width for mobile */
     }
 
     button {

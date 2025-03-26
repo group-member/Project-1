@@ -34,46 +34,58 @@
                     <p><strong>Sorting Status:</strong> <span id="sorting-status">Not Detected</span></p>
                     <p><strong>Last Sorting Activity:</strong> <span id="last-activity">None</span></p>
                 </div>
-
-                <!-- Quick Navigation -->
-                <div class="dashboard-card" id="navigation">
+                </div>
+                  <!-- Quick Navigation -->
+                  <div class="dashboard-card" id="navigation">
                     <h3>Quick Navigation</h3>
                     <button onclick="window.location.href='live_stream.html'">Go to Live Streaming</button>
                     <button onclick="window.location.href='data_logs.html'">Go to Data Logs</button>
-                    <!-- New Button to link to Feedback page -->
                     <button onclick="window.location.href='feedback_merged.php'">Give your Feedback about the System</button>
+                    <p><strong>Need more help?</strong></p>
+                    <button onclick="window.location.href='help.html'">System Help</button>
+                    <button onclick="window.location.href='settings.html'">System Settings</button>
                 </div>
-            </div>
         </section>
     </main>
 
     <script>
-        // Function to update the dashboard with the latest sorting log
+        // Function to fetch sorting logs from the database and update the dashboard
         function updateDashboard() {
-            let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
-
-            // Get the last 5 logs
-            let recentLogs = sortingLogs.slice(-5).reverse();
-
-            let alertsList = document.getElementById('alerts-list');
-            let sortingStatus = document.getElementById('sorting-status');
-            let lastActivity = document.getElementById('last-activity');
-
-            if (recentLogs.length > 0) {
-                alertsList.innerHTML = recentLogs.map(log => `<p>${log.timestamp} - ${log.status}</p>`).join('');
-                sortingStatus.textContent = recentLogs[0].status; // Latest status
-                lastActivity.textContent = recentLogs[0].timestamp; // Timestamp of latest alert
-            } else {
-                alertsList.textContent = "No sorting logs available.";
-                sortingStatus.textContent = "Not Detected";
-                lastActivity.textContent = "None";
-            }
+            const alertsList = document.getElementById('alerts-list');
+            const sortingStatus = document.getElementById('sorting-status');
+            const lastActivity = document.getElementById('last-activity');
+    
+            // Include the 'latest=true' parameter to get only the latest 5 logs
+            fetch('fetch_logs.php?latest=true') // PHP script to fetch logs from the database
+                .then(response => response.json()) // Parse the JSON response
+                .then(data => {
+                    if (data.length > 0) {
+                        // Display the most recent logs (in reverse order)
+                        let recentLogs = data.slice(-5); // Get the last 5 logs (latest first)
+                        alertsList.innerHTML = recentLogs.map(log => `<p>${log.timestamp} - ${log.status}</p>`).join('');
+                        
+                        // Update system insights with the latest status and activity
+                        sortingStatus.textContent = recentLogs[0].status;
+                        lastActivity.textContent = recentLogs[0].timestamp;
+                    } else {
+                        alertsList.textContent = "No sorting logs available.";
+                        sortingStatus.textContent = "Not Detected";
+                        lastActivity.textContent = "None";
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching logs:', error);
+                    alertsList.textContent = "Failed to fetch logs.";
+                    sortingStatus.textContent = "Error";
+                    lastActivity.textContent = "N/A";
+                });
         }
-
+    
         window.onload = updateDashboard;
-        setInterval(updateDashboard, 5000);
+        setInterval(updateDashboard, 5000); // Refresh every 5 seconds
     </script>
     
+
     <footer>
         <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>
     </footer>

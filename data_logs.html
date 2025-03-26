@@ -39,6 +39,7 @@
                         <tr>
                             <th>Timestamp</th>
                             <th>Sorting Status</th>
+                            <th>Prediction</th> <!-- New column for prediction -->
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -53,44 +54,65 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
     <script>
-        // Function to format the date to match DD/MM/YYYY format
+        let filteredLogs = []; // Array to store filtered logs
+
+        // Function to format the date to match yyyy-mm-dd format for filtering
         function formatDateToFilter(date) {
             const d = new Date(date);
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
             const year = d.getFullYear();
-            return `${day}/${month}/${year}`;
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`; // Format to yyyy-mm-dd
         }
 
-        // Function to update the table, apply filters and sort data in descending order
+        // Function to get user input (name and role)
+        function getUserInfo() {
+            const name = prompt("Enter your name:");
+            const role = prompt("Enter your role:");
+            return { name, role };
+        }
+
+        // Function to update the table, apply filters, and sort data in descending order
         function updateLogTable() {
-            let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
-            let filterDate = document.getElementById('filter-date').value;
+            fetch('fetch_logs.php') // Fetch logs from PHP backend
+                .then(response => response.json())
+                .then(sortingLogs => {
+                    let filterDate = document.getElementById('filter-date').value;
 
-            // Convert filterDate to DD/MM/YYYY format for filtering
-            if (filterDate) {
-                const formattedFilterDate = formatDateToFilter(filterDate);
-                sortingLogs = sortingLogs.filter(log => {
-                    const logDate = log.timestamp.split(',')[0]; // Extracts only the date part (DD/MM/YYYY)
-                    return logDate === formattedFilterDate;
+                    // Convert filterDate to yyyy-mm-dd format for filtering
+                    if (filterDate) {
+                        const formattedFilterDate = formatDateToFilter(filterDate);
+                        filteredLogs = sortingLogs.filter(log => {
+                            const logDate = log.timestamp.split(' ')[0]; // Extracts the date part (yyyy-mm-dd)
+                            return logDate === formattedFilterDate;
+                        });
+                    } else {
+                        filteredLogs = sortingLogs; // If no filter, use all logs
+                    }
+
+                    // Sort logs in descending order (latest first)
+                    filteredLogs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                    const logsTableBody = document.getElementById('logs-table').getElementsByTagName('tbody')[0];
+                    logsTableBody.innerHTML = ''; // Clear previous rows
+
+                    filteredLogs.forEach(log => {
+                        let row = logsTableBody.insertRow();
+                        let timestampCell = row.insertCell(0);
+                        let statusCell = row.insertCell(1);
+                        let predictionCell = row.insertCell(2); // New cell for prediction
+                        timestampCell.textContent = log.timestamp;
+                        statusCell.textContent = log.status;
+                        predictionCell.textContent = log.prediction; // Display prediction
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching logs:', error);
+                    alert("Failed to fetch logs.");
                 });
-            }
-
-            // Sort logs in descending order (latest first)
-            sortingLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-            const logsTableBody = document.getElementById('logs-table').getElementsByTagName('tbody')[0];
-            logsTableBody.innerHTML = ''; // Clear previous rows
-
-            sortingLogs.forEach(log => {
-                let row = logsTableBody.insertRow();
-                let timestampCell = row.insertCell(0);
-                let statusCell = row.insertCell(1);
-                timestampCell.textContent = log.timestamp;
-                statusCell.textContent = log.status;
-            });
         }
 
         // Update the table when the page loads
@@ -99,72 +121,38 @@
         // Add event listener to filter when date changes
         document.getElementById('filter-date').addEventListener('change', updateLogTable);
 
-        // Prompt for user name and role
-        function getUserInfo(callback) {
-            const userName = prompt("Please enter your name:");
-            const userRole = prompt("Please enter your role:");
-            callback(userName, userRole);
-        }
-
         // Download CSV with filtered data
         document.getElementById('download-csv').addEventListener('click', function () {
-            getUserInfo(function (userName, userRole) {
-                if (userName && userRole) {
-                    let filterDate = document.getElementById('filter-date').value;
-                    let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
-                    
-                    // Apply date filter if selected
-                    if (filterDate) {
-                        const formattedFilterDate = formatDateToFilter(filterDate);
-                        sortingLogs = sortingLogs.filter(log => {
-                            const logDate = log.timestamp.split(',')[0]; // Extracts only the date part (DD/MM/YYYY)
-                            return logDate === formattedFilterDate;
-                        });
-                    }
+            const userInfo = getUserInfo(); // Prompt for name and role
+            // Use filteredLogs for CSV export
+            let csvData = [
+                ['System Name', 'Garbage Monitoring System'],
+                ['Date', new Date().toLocaleDateString()],
+                ['User', userInfo.name],
+                ['Role', userInfo.role],
+                ['Timestamp', 'Sorting Status', 'Prediction'] // Include prediction in CSV
+            ];
 
-                    // Sort logs in descending order (latest first)
-                    sortingLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-                    let csvData = [['System Name', 'Garbage Monitoring System'], ['User', userName], ['Role', userRole], ['Date', new Date().toLocaleDateString()]];
-                    csvData.push(['Timestamp', 'Sorting Status']);
-                    sortingLogs.forEach(log => {
-                        csvData.push([log.timestamp, log.status]);
-                    });
-
-                    let csv = Papa.unparse(csvData);
-                    let blob = new Blob([csv], { type: 'text/csv' });
-                    let url = URL.createObjectURL(blob);
-                    let a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'sorting_logs.csv';
-                    a.click();
-                } else {
-                    alert("Name and Role are required.");
-                }
+            filteredLogs.forEach(log => {
+                csvData.push([log.timestamp, log.status, log.prediction]); // Include prediction in each row
             });
+
+            let csv = Papa.unparse(csvData);
+            let blob = new Blob([csv], { type: 'text/csv' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = 'sorting_logs.csv';
+            a.click();
         });
 
-        // Download PDF with filtered data
+        // Download PDF with filtered data and table layout
         document.getElementById('download-pdf').addEventListener('click', function () {
-    getUserInfo(function (userName, userRole) {
-        if (userName && userRole) {
-            let filterDate = document.getElementById('filter-date').value;
-            let sortingLogs = JSON.parse(localStorage.getItem('sortingLogs')) || [];
-            
-            // Apply date filter if selected
-            if (filterDate) {
-                const formattedFilterDate = formatDateToFilter(filterDate);
-                sortingLogs = sortingLogs.filter(log => {
-                    const logDate = log.timestamp.split(',')[0]; // Extracts only the date part (DD/MM/YYYY)
-                    return logDate === formattedFilterDate;
-                });
-            }
-
-            // Sort logs in descending order (latest first)
-            sortingLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
+            const userInfo = getUserInfo(); // Prompt for name and role
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
+
+            // Table styles and headers
             doc.setFontSize(18);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 128, 0);
@@ -172,65 +160,50 @@
             doc.setFontSize(12);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(0, 0, 0);
-            doc.text('User: ' + userName, 20, 25);
-            doc.text('Role: ' + userRole, 20, 35);
-            doc.text('Date: ' + new Date().toLocaleDateString(), 20, 45);
+            doc.text('Date: ' + new Date().toLocaleDateString(), 20, 25);
+            doc.text('User: ' + userInfo.name, 20, 35); // Include user name
+            doc.text('Role: ' + userInfo.role, 20, 45); // Include user role
             doc.text('---------------------------------------------', 20, 50);
 
-            let y = 60;
-            doc.setFontSize(14);
-            doc.text('Sorting Logs Report', 80, y);
-            y += 10;
+            // Prepare data for the table
+            const tableData = filteredLogs.map(log => [
+                log.timestamp,
+                log.status,
+                log.prediction
+            ]);
 
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Timestamp', 20, y);
-            doc.text('Sorting Status', 120, y);
-            y += 8;
-
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            
-            const lineHeight = 7;  // Adjust line height based on font size
-            const maxLinesPerPage = 25;  // Max lines per page
-            let lineCount = 0;
-
-            sortingLogs.forEach((log, i) => {
-                if (lineCount >= maxLinesPerPage) {
-                    doc.addPage();  // Start a new page
-                    lineCount = 0;
-                    y = 20; // Reset the y position
-                    doc.setFontSize(14);
-                    doc.text('Sorting Logs Report', 80, y);
-                    y += 10;
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('Timestamp', 20, y);
-                    doc.text('Sorting Status', 120, y);
-                    y += 8;
+            // Table options
+            const tableOptions = {
+                startY: 60,  // Y position where table will start
+                head: [['Timestamp', 'Sorting Status', 'Prediction']], // Column headers
+                body: tableData, // Data rows
+                theme: 'grid', // Use grid theme for better visibility
+                styles: {
+                    overflow: 'linebreak', // Break long text within cells
+                    fontSize: 10,
+                    cellPadding: 2,
+                },
+                columnStyles: {
+                    0: { cellWidth: 40 }, // Timestamp column width
+                    1: { cellWidth: 50 }, // Sorting Status column width
+                    2: { cellWidth: 60 }, // Prediction column width
                 }
+            };
 
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                doc.text(log.timestamp, 20, y + lineCount * lineHeight);
-                doc.text(log.status, 120, y + lineCount * lineHeight);
-                lineCount++;
-            });
+            // Generate the table
+            doc.autoTable(tableOptions);
 
-            doc.text('---------------------------------------------', 20, y + lineCount * lineHeight + 15);
-            doc.text('Approval & Verification', 80, y + lineCount * lineHeight + 25);
-            doc.text('Verified By: ___________________', 20, y + lineCount * lineHeight + 35);
-            doc.text('Signature: ___________________', 20, y + lineCount * lineHeight + 45);
-            doc.text('Official Stamp: _______________', 20, y + lineCount * lineHeight + 55);
+            // Footer section with signature area
+            doc.text('---------------------------------------------', 20, doc.lastAutoTable.finalY + 15);
+            doc.text('Approval & Verification', 80, doc.lastAutoTable.finalY + 25);
+            doc.text('Verified By: ___________________', 20, doc.lastAutoTable.finalY + 35);
+            doc.text('Signature: ___________________', 20, doc.lastAutoTable.finalY + 45);
+            doc.text('Official Stamp: _______________', 20, doc.lastAutoTable.finalY + 55);
             doc.save('sorting_logs.pdf');
-        } else {
-            alert("Name and Role are required.");
-        }
-    });
-});
-
+        });
     </script>
-     <footer>
+
+    <footer>
         <p>&copy; 2025 Garbage Monitoring System. All rights reserved.</p>
     </footer>
 </body>
